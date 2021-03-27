@@ -1,3 +1,5 @@
+import sys
+
 from notears.locally_connected import LocallyConnected
 from notears.lbfgsb_scipy import LBFGSBScipy
 from notears.trace_expm import trace_expm
@@ -5,6 +7,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 import math
+import pandas as pd
+from sklearn import preprocessing
 
 
 class NotearsMLP(nn.Module):
@@ -180,6 +184,7 @@ def dual_ascent_step(model, X, lambda1, lambda2, rho, alpha, h, rho_max):
             primal_obj = loss + penalty + l2_reg + l1_reg
             primal_obj.backward()
             return primal_obj
+
         optimizer.step(closure)  # NOTE: updates model in-place
         with torch.no_grad():
             h_new = model.h_func().item()
@@ -212,25 +217,90 @@ def notears_nonlinear(model: nn.Module,
 
 def main():
     torch.set_default_dtype(torch.double)
-    np.set_printoptions(precision=3)
+    np.set_printoptions(precision=6)
 
     import notears.utils as ut
-    ut.set_random_seed(123)
+    # ut.set_random_seed(123)
+    #
+    # n, d, s0, graph_type, sem_type = 200, 5, 9, 'ER', 'mim'
+    # B_true = ut.simulate_dag(d, s0, graph_type)
+    # np.savetxt('W_true.csv', B_true, delimiter=',')
+    #
+    # X = ut.simulate_nonlinear_sem(B_true, n, sem_type)
+    # np.savetxt('X.csv', X, delimiter=',')
 
-    n, d, s0, graph_type, sem_type = 200, 5, 9, 'ER', 'mim'
-    B_true = ut.simulate_dag(d, s0, graph_type)
-    np.savetxt('W_true.csv', B_true, delimiter=',')
+    # ----- Sports data -----
 
-    X = ut.simulate_nonlinear_sem(B_true, n, sem_type)
-    np.savetxt('X.csv', X, delimiter=',')
+    if len(sys.argv) < 2:
+        raise Exception("Specify where the data files are.")
+
+    running_mode = str(sys.argv[1])
+
+    if running_mode == 'local':
+        data_directory = '/Users/shawnxys/Desktop/SFU_Vault/preprocessed_sports_data/'
+        results_directory = './results/'
+
+    elif running_mode == 'lab':
+        data_directory = '/Local-Scratch/shawnxys/SFU_Vault/preprocessed_sports_data/'
+        results_directory = '/Local-Scratch/shawnxys/causal_sports_results/results/'
+
+    else:
+        raise Exception("Specify where the data files are: {local, compute_canada, lab}")
+
+    features_directory = data_directory + 'features_two_steps.csv'
+    action_shots_directory = data_directory + 'actions_shot_two_steps.csv'
+    rewards_directory = data_directory + 'rewards_two_steps.csv'
+
+    # load the data
+    features_df = pd.read_csv(features_directory)
+    actions_shot_df = pd.read_csv(action_shots_directory)
+    rewards_df = pd.read_csv(rewards_directory)
+
+    features_shots_rewards_df = pd.concat([features_df, actions_shot_df, rewards_df], axis=1)
+
+    # adjust_home_away
+    features_shots_rewards_df = features_shots_rewards_df.rename(columns={"home_2": "home_or_away"})
+    features_shots_rewards_df = features_shots_rewards_df.drop(columns=['home_1', 'away_1', 'away_2'])
+
+    # adjust_reward
+    features_shots_rewards_df = features_shots_rewards_df.drop(columns=['reward_1'])
+
+    # drop all columns other than shot_1, shot_2, reward_2
+    # features_shots_rewards_df = features_shots_rewards_df[['shot_1', 'shot_2', 'reward_2']]
+
+    # mitigate the sparsity of rewards
+    # features_shots_rewards_df = denser_reward_1(features_shots_rewards_df)
+    # features_shots_rewards_df = denser_reward_2(features_shots_rewards_df)
+
+    print(features_shots_rewards_df.columns)
+
+    # data that will be used to run the algorithm
+    X = features_shots_rewards_df.to_numpy()
+    # X = features_shots_rewards_df.iloc[:10000].to_numpy()
+
+    # data standardization
+    scaler = preprocessing.StandardScaler().fit(X)
+    print(X.std(axis=0))  # std over columns, https://numpy.org/doc/stable/reference/generated/numpy.mean.html
+    X = scaler.transform(X)
+    print(X.std(axis=0))
+
+    d = X.shape[1]
+
+    print('Start...')
+
+    # w_threshold = 0.3  # default
+    w_threshold = 0.0
+    print('w_threshold: ', w_threshold)
 
     model = NotearsMLP(dims=[d, 10, 1], bias=True)
-    W_est = notears_nonlinear(model, X, lambda1=0.01, lambda2=0.01)
-    assert ut.is_dag(W_est)
-    np.savetxt('W_est.csv', W_est, delimiter=',')
-    acc = ut.count_accuracy(B_true, W_est != 0)
-    print(acc)
+    W_est = notears_nonlinear(model, X, lambda1=0.01, lambda2=0.01, w_threshold=w_threshold)
+    # assert ut.is_dag(W_est)
+    np.savetxt('notears_DAGs_' + str(w_threshold) + '.csv', W_est, delimiter=',')
+    # acc = ut.count_accuracy(B_true, W_est != 0)
+    # print(acc)
 
 
 if __name__ == '__main__':
     main()
+
+    print('Done.')
