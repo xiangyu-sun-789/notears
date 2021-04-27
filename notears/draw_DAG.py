@@ -11,7 +11,7 @@ if __name__ == "__main__":
                       'duration_2', 'home_or_away', 'angle2gate_2', 'shot_1', 'shot_2',
                       'reward_2']
 
-    adjacency_matrix_ = np.loadtxt(open("./notears_DAGs_0.0.csv", "rb"), delimiter=",", skiprows=0)
+    adjacency_matrix_ = np.loadtxt(open("./notears_DAGs_0.0_prior_knowledge.csv", "rb"), delimiter=",", skiprows=0)
 
     # direction of the adjacency matrix needs to be transposed.
     # in LINGAM, the adjacency matrix is defined as column variable -> row variable
@@ -19,4 +19,4 @@ if __name__ == "__main__":
     dot = make_dot(np.transpose(adjacency_matrix_), labels=variable_names)
 
     dot.format = 'png'
-    dot.render('./DAG_0.0_image')
+    dot.render('./DAG_0.0_prior_knowledge_image')

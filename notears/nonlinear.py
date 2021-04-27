@@ -16,6 +16,10 @@ class NotearsMLP(nn.Module):
         super(NotearsMLP, self).__init__()
         assert len(dims) >= 2
         assert dims[-1] == 1
+
+        self.variable_names = variable_names
+        self.no_time_inverse_edges = no_time_inverse_edges
+
         d = dims[0]
         self.dims = dims
         # fc1: variable splitting for l1
@@ -29,10 +33,10 @@ class NotearsMLP(nn.Module):
             layers.append(LocallyConnected(d, dims[l + 1], dims[l + 2], bias=bias))
         self.fc2 = nn.ModuleList(layers)
 
-        self.variable_names = variable_names
-        self.no_time_inverse_edges = no_time_inverse_edges
-
     def _bounds(self):
+        print('self.no_time_inverse_edges: ', self.no_time_inverse_edges)
+        print('self.variable_names: ', self.variable_names)
+
         d = self.dims[0]
         bounds = []
         for j in range(d):
@@ -217,7 +221,8 @@ def notears_nonlinear(model: nn.Module,
                       rho_max: float = 1e+16,
                       w_threshold: float = 0.3):
     rho, alpha, h = 1.0, 0.0, np.inf
-    for _ in range(max_iter):
+    for iteration in range(max_iter):
+        print('iteration: ', iteration)
         rho, alpha, h = dual_ascent_step(model, X, lambda1, lambda2,
                                          rho, alpha, h, rho_max)
         if h <= h_tol or rho >= rho_max:
@@ -283,13 +288,11 @@ def main():
     # features_shots_rewards_df = denser_reward_1(features_shots_rewards_df)
     # features_shots_rewards_df = denser_reward_2(features_shots_rewards_df)
 
-    print(features_shots_rewards_df.columns)
+    variable_names = [s for s in features_shots_rewards_df.columns]
 
     # data that will be used to run the algorithm
     X = features_shots_rewards_df.to_numpy()
     # X = features_shots_rewards_df.iloc[:10000].to_numpy()
-
-    variable_names = [s for s in features_shots_rewards_df.columns]
 
     # data standardization
     scaler = preprocessing.StandardScaler().fit(X)
@@ -306,13 +309,13 @@ def main():
     print('w_threshold: ', w_threshold)
 
     # if add temporal restriction of no time inverse edges
-    no_time_inverse_edges = False
-    # no_time_inverse_edges = True
+    # no_time_inverse_edges = False
+    no_time_inverse_edges = True
 
     model = NotearsMLP(dims=[d, 10, 1], bias=True, variable_names=variable_names, no_time_inverse_edges=no_time_inverse_edges)
     W_est = notears_nonlinear(model, X, lambda1=0.01, lambda2=0.01, w_threshold=w_threshold)
     # assert ut.is_dag(W_est)
-    np.savetxt('notears_DAGs_' + str(w_threshold) + '.csv', W_est, delimiter=',')
+    np.savetxt('notears_DAGs_' + str(w_threshold) + '_prior_knowledge.csv', W_est, delimiter=',')
     # acc = ut.count_accuracy(B_true, W_est != 0)
     # print(acc)
 
