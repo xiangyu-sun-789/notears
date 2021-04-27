@@ -9,6 +9,7 @@ import numpy as np
 import math
 import pandas as pd
 from sklearn import preprocessing
+from lingam.utils import make_dot
 
 
 class NotearsMLP(nn.Module):
@@ -232,6 +233,16 @@ def notears_nonlinear(model: nn.Module,
     return W_est
 
 
+def NOTEARS_draw_DAGs(adjacency_matrix, file_name, variable_names):
+    # direction of the adjacency matrix needs to be transposed.
+    # in LINGAM, the adjacency matrix is defined as column variable -> row variable
+    # in NOTEARS, the W is defined as row variable -> column variable
+    dot = make_dot(np.transpose(adjacency_matrix), labels=variable_names)
+
+    dot.format = 'png'
+    dot.render(file_name)
+
+
 def main():
     torch.set_default_dtype(torch.double)
     np.set_printoptions(precision=6)
@@ -292,7 +303,7 @@ def main():
 
     # data that will be used to run the algorithm
     X = features_shots_rewards_df.to_numpy()
-    # X = features_shots_rewards_df.iloc[:10000].to_numpy()
+    # X = features_shots_rewards_df.iloc[:100].to_numpy()
 
     # data standardization
     scaler = preprocessing.StandardScaler().fit(X)
@@ -314,10 +325,14 @@ def main():
 
     model = NotearsMLP(dims=[d, 10, 1], bias=True, variable_names=variable_names, no_time_inverse_edges=no_time_inverse_edges)
     W_est = notears_nonlinear(model, X, lambda1=0.01, lambda2=0.01, w_threshold=w_threshold)
+
     # assert ut.is_dag(W_est)
-    np.savetxt('notears_DAGs_' + str(w_threshold) + '_prior_knowledge.csv', W_est, delimiter=',')
+    file_name = 'notears_DAGs_' + str(w_threshold) + '_prior_knowledge'
+    np.savetxt(file_name + '.csv', W_est, delimiter=',')
     # acc = ut.count_accuracy(B_true, W_est != 0)
     # print(acc)
+
+    NOTEARS_draw_DAGs(W_est, file_name, variable_names)
 
 
 if __name__ == '__main__':
