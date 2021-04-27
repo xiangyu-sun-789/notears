@@ -12,7 +12,7 @@ from sklearn import preprocessing
 
 
 class NotearsMLP(nn.Module):
-    def __init__(self, dims, bias=True):
+    def __init__(self, dims, bias=True, variable_names=None, no_time_inverse_edges=False):
         super(NotearsMLP, self).__init__()
         assert len(dims) >= 2
         assert dims[-1] == 1
@@ -29,6 +29,9 @@ class NotearsMLP(nn.Module):
             layers.append(LocallyConnected(d, dims[l + 1], dims[l + 2], bias=bias))
         self.fc2 = nn.ModuleList(layers)
 
+        self.variable_names = variable_names
+        self.no_time_inverse_edges = no_time_inverse_edges
+
     def _bounds(self):
         d = self.dims[0]
         bounds = []
@@ -39,6 +42,15 @@ class NotearsMLP(nn.Module):
                         bound = (0, 0)
                     else:
                         bound = (0, None)
+
+                    if self.no_time_inverse_edges == True:
+                        i_time_step = int(self.variable_names[i][-1])
+                        j_time_step = int(self.variable_names[j][-1])
+
+                        # restrict the weights to be 0 if it is from a variable at a later step (i) to a variable at an early step (j)
+                        if i_time_step > j_time_step:
+                            bound = (0, 0)
+
                     bounds.append(bound)
         return bounds
 
@@ -259,7 +271,6 @@ def main():
     features_shots_rewards_df = pd.concat([features_df, actions_shot_df, rewards_df], axis=1)
 
     # adjust_home_away
-    features_shots_rewards_df = features_shots_rewards_df.rename(columns={"home_2": "home_or_away"})
     features_shots_rewards_df = features_shots_rewards_df.drop(columns=['home_1', 'away_1', 'away_2'])
 
     # adjust_reward
@@ -278,6 +289,8 @@ def main():
     X = features_shots_rewards_df.to_numpy()
     # X = features_shots_rewards_df.iloc[:10000].to_numpy()
 
+    variable_names = [s for s in features_shots_rewards_df.columns]
+
     # data standardization
     scaler = preprocessing.StandardScaler().fit(X)
     print(X.std(axis=0))  # std over columns, https://numpy.org/doc/stable/reference/generated/numpy.mean.html
@@ -292,7 +305,11 @@ def main():
     w_threshold = 0.0
     print('w_threshold: ', w_threshold)
 
-    model = NotearsMLP(dims=[d, 10, 1], bias=True)
+    # if add temporal restriction of no time inverse edges
+    no_time_inverse_edges = False
+    # no_time_inverse_edges = True
+
+    model = NotearsMLP(dims=[d, 10, 1], bias=True, variable_names=variable_names, no_time_inverse_edges=no_time_inverse_edges)
     W_est = notears_nonlinear(model, X, lambda1=0.01, lambda2=0.01, w_threshold=w_threshold)
     # assert ut.is_dag(W_est)
     np.savetxt('notears_DAGs_' + str(w_threshold) + '.csv', W_est, delimiter=',')
