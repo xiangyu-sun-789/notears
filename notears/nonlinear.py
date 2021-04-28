@@ -34,10 +34,10 @@ class NotearsMLP(nn.Module):
             layers.append(LocallyConnected(d, dims[l + 1], dims[l + 2], bias=bias))
         self.fc2 = nn.ModuleList(layers)
 
-    def _bounds(self):
-        print('self.no_time_inverse_edges: ', self.no_time_inverse_edges)
         print('self.variable_names: ', self.variable_names)
+        print('self.no_time_inverse_edges: ', self.no_time_inverse_edges)
 
+    def _bounds(self):
         d = self.dims[0]
         bounds = []
         for j in range(d):
@@ -294,10 +294,6 @@ def main():
 
     # drop all columns other than shot_1, shot_2, reward_2
     # features_shots_rewards_df = features_shots_rewards_df[['shot_1', 'shot_2', 'reward_2']]
-
-    # mitigate the sparsity of rewards
-    # features_shots_rewards_df = denser_reward_1(features_shots_rewards_df)
-    # features_shots_rewards_df = denser_reward_2(features_shots_rewards_df)
 
     variable_names = [s for s in features_shots_rewards_df.columns]
 
