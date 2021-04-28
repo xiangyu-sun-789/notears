@@ -1,0 +1,63 @@
+digraph {
+	xAdjCoord_1
+	yAdjCoord_1
+	scoreDifferential_1
+	manpowerSituation_1
+	outcome_1
+	velocity_x_1
+	velocity_y_1
+	time_remain_1
+	duration_1
+	angle2gate_1
+	xAdjCoord_2
+	yAdjCoord_2
+	scoreDifferential_2
+	manpowerSituation_2
+	outcome_2
+	velocity_x_2
+	velocity_y_2
+	time_remain_2
+	duration_2
+	home_2
+	angle2gate_2
+	shot_1
+	shot_2
+	reward_2
+	scoreDifferential_1 -> xAdjCoord_1 [label=0.01]
+	manpowerSituation_1 -> xAdjCoord_1 [label=0.44]
+	velocity_x_1 -> xAdjCoord_1 [label=0.46]
+	duration_1 -> xAdjCoord_1 [label=0.31]
+	velocity_y_1 -> yAdjCoord_1 [label=0.60]
+	angle2gate_1 -> yAdjCoord_1 [label=1.03]
+	duration_1 -> outcome_1 [label=0.32]
+	xAdjCoord_1 -> xAdjCoord_2 [label=1.49]
+	velocity_x_1 -> xAdjCoord_2 [label=0.64]
+	yAdjCoord_1 -> yAdjCoord_2 [label=1.33]
+	velocity_y_1 -> yAdjCoord_2 [label=1.26]
+	angle2gate_2 -> yAdjCoord_2 [label=0.01]
+	scoreDifferential_1 -> scoreDifferential_2 [label=1.43]
+	manpowerSituation_1 -> manpowerSituation_2 [label=1.47]
+	manpowerSituation_1 -> outcome_2 [label=0.04]
+	outcome_1 -> outcome_2 [label=0.42]
+	manpowerSituation_2 -> outcome_2 [label=0.04]
+	duration_2 -> outcome_2 [label=0.22]
+	shot_2 -> outcome_2 [label=0.08]
+	yAdjCoord_1 -> velocity_y_2 [label=0.24]
+	yAdjCoord_2 -> velocity_y_2 [label=0.44]
+	time_remain_1 -> time_remain_2 [label=1.57]
+	xAdjCoord_1 -> duration_2 [label=0.05]
+	manpowerSituation_1 -> duration_2 [label=0.05]
+	outcome_1 -> duration_2 [label=0.60]
+	velocity_x_1 -> duration_2 [label=0.06]
+	xAdjCoord_2 -> duration_2 [label=0.05]
+	shot_2 -> duration_2 [label=0.07]
+	xAdjCoord_1 -> shot_1 [label=0.59]
+	outcome_1 -> shot_1 [label=0.42]
+	duration_1 -> shot_1 [label=0.61]
+	outcome_1 -> reward_2 [label=0.13]
+	velocity_x_2 -> reward_2 [label=0.25]
+	shot_1 -> reward_2 [label=0.55]
+	{
+		rank=same
+	}
+}
