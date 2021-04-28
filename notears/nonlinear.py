@@ -320,14 +320,20 @@ def main():
     print('w_threshold: ', w_threshold)
 
     # if add temporal restriction of no time inverse edges
-    # no_time_inverse_edges = False
-    no_time_inverse_edges = True
+    no_time_inverse_edges = False
+    # no_time_inverse_edges = True
 
-    model = NotearsMLP(dims=[d, 10, 1], bias=True, variable_names=variable_names, no_time_inverse_edges=no_time_inverse_edges)
+    model = NotearsMLP(dims=[d, 10, 1], bias=True, variable_names=variable_names,
+                       no_time_inverse_edges=no_time_inverse_edges)
     W_est = notears_nonlinear(model, X, lambda1=0.01, lambda2=0.01, w_threshold=w_threshold)
 
     # assert ut.is_dag(W_est)
-    file_name = 'notears_DAGs_' + str(w_threshold) + '_prior_knowledge'
+
+    if no_time_inverse_edges:
+        file_name = 'notears_DAGs_' + str(w_threshold) + '_prior_knowledge'
+    else:
+        file_name = 'notears_DAGs_' + str(w_threshold)
+
     np.savetxt(file_name + '.csv', W_est, delimiter=',')
     # acc = ut.count_accuracy(B_true, W_est != 0)
     # print(acc)
