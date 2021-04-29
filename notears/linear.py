@@ -1,7 +1,13 @@
+import sys
+
 import numpy as np
 import scipy.linalg as slin
 import scipy.optimize as sopt
 from scipy.special import expit as sigmoid
+from sklearn import preprocessing
+import pandas as pd
+
+from notears.nonlinear import NOTEARS_draw_DAGs
 
 
 def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+16, w_threshold=0.3):
@@ -87,20 +93,81 @@ def notears_linear(X, lambda1, loss_type, max_iter=100, h_tol=1e-8, rho_max=1e+1
 
 
 if __name__ == '__main__':
-    from notears import utils
-    utils.set_random_seed(1)
+    # from notears import utils
+    # utils.set_random_seed(1)
+    #
+    # n, d, s0, graph_type, sem_type = 100, 20, 20, 'ER', 'gauss'
+    # B_true = utils.simulate_dag(d, s0, graph_type)
+    # W_true = utils.simulate_parameter(B_true)
+    # np.savetxt('W_true.csv', W_true, delimiter=',')
+    #
+    # X = utils.simulate_linear_sem(W_true, n, sem_type)
+    # np.savetxt('X.csv', X, delimiter=',')
 
-    n, d, s0, graph_type, sem_type = 100, 20, 20, 'ER', 'gauss'
-    B_true = utils.simulate_dag(d, s0, graph_type)
-    W_true = utils.simulate_parameter(B_true)
-    np.savetxt('W_true.csv', W_true, delimiter=',')
+    # ----- Sports data -----
 
-    X = utils.simulate_linear_sem(W_true, n, sem_type)
-    np.savetxt('X.csv', X, delimiter=',')
+    if len(sys.argv) < 2:
+        raise Exception("Specify where the data files are.")
 
-    W_est = notears_linear(X, lambda1=0.1, loss_type='l2')
-    assert utils.is_dag(W_est)
-    np.savetxt('W_est.csv', W_est, delimiter=',')
-    acc = utils.count_accuracy(B_true, W_est != 0)
-    print(acc)
+    running_mode = str(sys.argv[1])
 
+    if running_mode == 'local':
+        data_directory = '/Users/shawnxys/Desktop/SFU_Vault/preprocessed_sports_data/'
+        results_directory = './results/'
+
+    elif running_mode == 'lab':
+        data_directory = '/Local-Scratch/shawnxys/SFU_Vault/preprocessed_sports_data/'
+        results_directory = '/Local-Scratch/shawnxys/causal_sports_results/results/'
+
+    else:
+        raise Exception("Specify where the data files are: {local, compute_canada, lab}")
+
+    features_directory = data_directory + 'features_two_steps.csv'
+    action_shots_directory = data_directory + 'actions_shot_two_steps.csv'
+    rewards_directory = data_directory + 'rewards_two_steps.csv'
+
+    # load the data
+    features_df = pd.read_csv(features_directory)
+    actions_shot_df = pd.read_csv(action_shots_directory)
+    rewards_df = pd.read_csv(rewards_directory)
+
+    features_shots_rewards_df = pd.concat([features_df, actions_shot_df, rewards_df], axis=1)
+
+    # adjust_home_away
+    features_shots_rewards_df = features_shots_rewards_df.drop(columns=['home_1', 'away_1', 'away_2'])
+
+    # adjust_reward
+    features_shots_rewards_df = features_shots_rewards_df.drop(columns=['reward_1'])
+
+    # drop all columns other than shot_1, shot_2, reward_2
+    # features_shots_rewards_df = features_shots_rewards_df[['shot_1', 'shot_2', 'reward_2']]
+
+    variable_names = [s for s in features_shots_rewards_df.columns]
+
+    # data that will be used to run the algorithm
+    X = features_shots_rewards_df.to_numpy()
+    # X = features_shots_rewards_df.iloc[:100].to_numpy()
+
+    # data standardization
+    scaler = preprocessing.StandardScaler().fit(X)
+    print(X.std(axis=0))  # std over columns, https://numpy.org/doc/stable/reference/generated/numpy.mean.html
+    X = scaler.transform(X)
+    print(X.std(axis=0))
+
+    print('Start...')
+
+    # w_threshold = 0.3  # default
+    w_threshold = 0.0
+    print('w_threshold: ', w_threshold)
+
+    W_est = notears_linear(X, lambda1=0.1, loss_type='l2', w_threshold=w_threshold)
+
+    # assert utils.is_dag(W_est)
+
+    file_name = 'linear_notears_DAGs_' + str(w_threshold)
+
+    np.savetxt(file_name + '.csv', W_est, delimiter=',')
+    # acc = utils.count_accuracy(B_true, W_est != 0)
+    # print(acc)
+
+    NOTEARS_draw_DAGs(W_est, file_name, variable_names)

@@ -247,7 +247,7 @@ def main():
     torch.set_default_dtype(torch.double)
     np.set_printoptions(precision=6)
 
-    import notears.utils as ut
+    # import notears.utils as ut
     # ut.set_random_seed(123)
     #
     # n, d, s0, graph_type, sem_type = 200, 5, 9, 'ER', 'mim'
@@ -326,9 +326,9 @@ def main():
     # assert ut.is_dag(W_est)
 
     if no_time_inverse_edges:
-        file_name = 'notears_DAGs_' + str(w_threshold) + '_prior_knowledge'
+        file_name = 'nonlinear_notears_DAGs_' + str(w_threshold) + '_prior_knowledge'
     else:
-        file_name = 'notears_DAGs_' + str(w_threshold)
+        file_name = 'nonlinear_notears_DAGs_' + str(w_threshold)
 
     np.savetxt(file_name + '.csv', W_est, delimiter=',')
     # acc = ut.count_accuracy(B_true, W_est != 0)
